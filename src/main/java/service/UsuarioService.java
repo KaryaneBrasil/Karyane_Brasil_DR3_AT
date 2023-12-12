@@ -1,46 +1,90 @@
 package service;
 
+import DAO.GenericDao;
 import dto.UsuarioDTOInput;
 import dto.UsuarioDTOOutput;
 import model.Usuario;
 import org.modelmapper.ModelMapper;
 
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 
 public class UsuarioService {
 
-    private final List<Usuario> listaUsuarios=new ArrayList<>();
-    private final ModelMapper modelMapper=new ModelMapper();
+    private static final ModelMapper modelMapper=new ModelMapper();
 
-    public List<UsuarioDTOOutput> listar() {
-        List<UsuarioDTOOutput> usuariosDTO=new ArrayList<>();
-        for (Usuario usuario : listaUsuarios) {
-            usuariosDTO.add(modelMapper.map(usuario, UsuarioDTOOutput.class));
+    public List<UsuarioDTOOutput> listarUsuarios() {
+        try (GenericDao<Usuario> usuarioDAO=new GenericDao<>(Usuario.class)) {
+            usuarioDAO.begin();
+            List<Usuario> usuarios=usuarioDAO.findAll();
+            usuarioDAO.end();
+            return modelMapper.map(usuarios, List.class);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return Collections.emptyList();
         }
-        return usuariosDTO;
     }
 
-    public void inserir(UsuarioDTOInput usuarioDTOInput) {
+    public UsuarioDTOOutput obterUsuario(long id) {
+        try (GenericDao<Usuario> usuarioDAO=new GenericDao<>(Usuario.class)) {
+            usuarioDAO.begin();
+            UsuarioDTOOutput usuarioDTOOutput=modelMapper.map(usuarioDAO.findById(id), UsuarioDTOOutput.class);
+            usuarioDAO.end();
+            return usuarioDTOOutput;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public void adicionarUsuario(UsuarioDTOInput usuarioDTOInput) {
         Usuario usuario=modelMapper.map(usuarioDTOInput, Usuario.class);
-        listaUsuarios.add(usuario);
+        try (GenericDao<Usuario> usuarioDAO=new GenericDao<>(Usuario.class)) {
+            usuarioDAO.begin();
+            usuarioDAO.create(usuario);
+            usuarioDAO.end();
+        } catch (Exception ignored) {
+
+        }
     }
 
-    public void alterar(UsuarioDTOInput usuarioDTOInput) {
+    public void alterarUsuario(UsuarioDTOInput usuarioDTOInput) {
         Usuario usuario=modelMapper.map(usuarioDTOInput, Usuario.class);
-        // Lógica para substituir o usuário existente na lista
+        try (GenericDao<Usuario> usuarioDAO=new GenericDao<>(Usuario.class)) {
+            usuarioDAO.begin();
+            usuarioDAO.update(usuario);
+            usuarioDAO.end();
+        } catch (Exception ignored) {
+
+        }
     }
 
-    public UsuarioDTOOutput buscar(int id) {
-        Optional<Usuario> usuarioOptional=listaUsuarios.stream()
-                .filter(usuario -> usuario.getId() == id)
-                .findFirst();
-        return usuarioOptional.map(usuario -> modelMapper.map(usuario, UsuarioDTOOutput.class))
-                .orElse(null);
+    public void removerUsuario(long id) {
+        try (GenericDao<Usuario> usuarioDAO=new GenericDao<>(Usuario.class)) {
+            usuarioDAO.begin();
+            Usuario usuario=usuarioDAO.findById(id);
+            if (usuario != null) {
+                usuarioDAO.delete(id);
+            }
+            usuarioDAO.end();
+        } catch (Exception ignored) {
+        }
     }
 
-    public void excluir(int id) {
-        listaUsuarios.removeIf(usuario -> usuario.getId() == id);
+    public void inserirUsuario(UsuarioDTOInput usuarioDTOInput) {
+        Usuario usuario=modelMapper.map(usuarioDTOInput, Usuario.class);
+        try (GenericDao<Usuario> usuarioDAO=new GenericDao<>(Usuario.class)) {
+            usuarioDAO.begin();
+            usuarioDAO.create(usuario);
+            usuarioDAO.end();
+        } catch (Exception ignored) {
+
+        }
+    }
+
+    public void inserirUsuario(String nome, String email) {
+        UsuarioDTOInput usuarioDTOInput=new UsuarioDTOInput();
+        usuarioDTOInput.setNome(nome);
+        usuarioDTOInput.setEmail(email);
+        inserirUsuario(usuarioDTOInput);
     }
 }

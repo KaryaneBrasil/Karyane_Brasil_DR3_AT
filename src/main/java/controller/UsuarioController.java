@@ -2,6 +2,7 @@ package controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dto.UsuarioDTOInput;
+import lombok.Getter;
 import service.UsuarioService;
 import spark.Request;
 import spark.Response;
@@ -10,67 +11,54 @@ import static spark.Spark.*;
 
 public class UsuarioController {
 
-    private final UsuarioService usuarioService;
-    private final ObjectMapper objectMapper;
+    private final UsuarioService usuarioService=new UsuarioService();
+    @Getter
+    private final ObjectMapper objMapper;
 
-    public UsuarioController(UsuarioService usuarioService, ObjectMapper objectMapper) {
-        this.usuarioService=usuarioService;
-        this.objectMapper=objectMapper;
-        init();
+    public UsuarioController(ObjectMapper objMapper) {
+        this.objMapper=objMapper;
+
+        get("/usuarios", (Request request, Response response) -> {
+            response.type("application/json");
+            response.status(200);
+            String json;
+            json=objMapper.writeValueAsString(usuarioService.listarUsuarios());
+            return json;
+        });
+
+        get("/usuarios/:id", (request, response) -> {
+            response.type("application/json");
+            String idParam=request.params("id");
+            long id=Long.parseLong(idParam);
+            String json=objMapper.writeValueAsString(usuarioService.obterUsuario(id));
+            response.status(200);
+            return json;
+        });
+
+        post("/usuarios", (request, response) -> {
+            UsuarioDTOInput usuarioDTOInput=objMapper.readValue(request.body(), UsuarioDTOInput.class);
+            usuarioService.adicionarUsuario(usuarioDTOInput);
+            response.type("application/json");
+            response.status(201);
+            return "Usuário inserido com sucesso.";
+        });
+
+        put("/usuarios", (request, response) -> {
+            UsuarioDTOInput usuarioDTOInput=objMapper.readValue(request.body(), UsuarioDTOInput.class);
+            usuarioService.alterarUsuario(usuarioDTOInput);
+            response.type("application/json");
+            response.status(200);
+            return "Usuário alterado com sucesso.";
+        });
+
+        delete("/usuarios/:id", (request, response) -> {
+            response.type("application/json");
+            String idParam=request.params("id");
+            long id=Long.parseLong(idParam);
+            usuarioService.removerUsuario(id);
+            response.status(200);
+            return "Usuário excluído com sucesso.";
+        });
     }
 
-    private void respostasRequisicoes() {
-        get("/usuarios", this::listarUsuarios, objectMapper::writeValueAsString);
-        get("/usuarios/:id", this::buscarUsuario, objectMapper::writeValueAsString);
-        delete("/usuarios/:id", this::excluirUsuario, objectMapper::writeValueAsString);
-        post("/usuarios", this::inserirUsuario, objectMapper::writeValueAsString);
-        put("/usuarios", this::alterarUsuario, objectMapper::writeValueAsString);
-    }
-
-    private Object listarUsuarios(Request request, Response response) {
-        response.type("application/json");
-        response.status(200);
-        return usuarioService.listar();
-    }
-
-    private Object buscarUsuario(Request request, Response response) {
-        response.type("application/json");
-        response.status(200);
-        int id=Integer.parseInt(request.params(":id"));
-        return usuarioService.buscar(id);
-    }
-
-    private Object excluirUsuario(Request request, Response response) {
-        response.type("application/json");
-        response.status(204);
-        int id=Integer.parseInt(request.params(":id"));
-        usuarioService.excluir(id);
-        return "";
-    }
-
-    private Object inserirUsuario(Request request, Response response) {
-        response.type("application/json");
-        response.status(201);
-        try {
-            UsuarioDTOInput usuarioDTOInput=objectMapper.readValue(request.body(), UsuarioDTOInput.class);
-            usuarioService.inserir(usuarioDTOInput);
-            return "";
-        } catch (Exception e) {
-            response.status(400);
-            return "Erro ao processar a requisição";
-        }
-    }
-
-    private Object alterarUsuario(Request request, Response response) {
-        response.type("application/json");
-        response.status(200);
-        try {
-            UsuarioDTOInput usuarioDTOInput=objectMapper.readValue(request.body(), UsuarioDTOInput.class);
-            usuarioService.alterar(usuarioDTOInput);
-            return "";
-        } catch (Exception e) {
-            response.status(400);
-            return "Erro ao processar a requisição";
-        }
-    }
 }
